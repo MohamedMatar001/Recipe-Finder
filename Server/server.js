@@ -1,43 +1,45 @@
 const express = require('express');
-const cors = require('cors');
 const axios = require('axios');
-const app = express();
-const PORT = 3000;
+const cors = require('cors');
 require('dotenv').config();
 
-// Middleware to parse JSON
+const app = express();
+const PORT = process.env.PORT || 5000;
+
 app.use(cors());
 app.use(express.json());
 
-console.log("EDAMAM_APP_ID:", process.env.EDAMAM_APP_ID);
-console.log("EDAMAM_APP_KEY:", process.env.EDAMAM_APP_KEY);
-
-// Basic route
 app.get('/', (req, res) => {
-    try{
-        res.send("Hello From Server")
-    }
-    catch(err){
-        console.log(err)
-        res.status(500).send("Internal Server Error")
-    };
+  res.send('Welcome to the Recipe API!');
 });
 
 app.get('/api/recipes/v2', async (req, res) => {
-    const { q: query } = req.query; // Get search query from frontend
-  
-    try {
-      const response = await axios.get(
-        `https://api.edamam.com/search?q=${query}&app_id=${process.env.EDAMAM_APP_ID}&app_key=${process.env.EDAMAM_APP_KEY}`
-      );
-      res.json(response.data.hits); // Send recipes to frontend
-    } catch (error) {
-      console.error('Edamam API error:', error);
-      res.status(500).json({ error: 'Failed to fetch recipes' });
-    }
-  });
+  const { query } = req.query;
 
-// Start the server
+  console.log("EDAMAM_APP_ID:", process.env.EDAMAM_APP_ID);
+  console.log("EDAMAM_APP_KEY:", process.env.EDAMAM_APP_KEY);
+  console.log("Query:", query);
+
+  try {
+    const response = await axios.get('https://api.edamam.com/api/recipes/v2', {
+      headers: {
+        'Edamam-Account-User': process.env.EDAMAM_USER_ID // 
+      },
+      params: {
+        type: 'public', // required for v2
+        q: query,
+        app_id: process.env.EDAMAM_APP_ID,
+        app_key: process.env.EDAMAM_APP_KEY
+      }
+    });
+
+    res.json(response.data);
+  } catch (error) {
+    console.error('Error fetching recipes:', error?.response?.data || error.message);
+    res.status(500).json({ error: 'Failed to fetch recipes', details: error?.response?.data });
+  }
+});
+
 app.listen(PORT, () => {
-    console.log(`Server is running on http://localhost:${PORT}`);
+  console.log(`Server running on port ${PORT}`);
 });
